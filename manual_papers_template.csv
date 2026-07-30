@@ -1,0 +1,2 @@
+title,abstract,year,venue,doi_or_url
+Example: Deep learning for depression prediction from EEG,"Paste the full abstract text here. Needs to be at least a couple hundred characters for the extraction step to have enough to work with. Delete this example row before adding your own.",2021,IEEE Transactions on Biomedical Engineering,https://doi.org/10.xxxx/example
