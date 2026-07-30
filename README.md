@@ -21,9 +21,114 @@ headline result), and turns all of that into a small graph. Then a
 short analysis script asks a few questions of that graph, including the
 imaging-versus-cheap-data trend question above.
 
-This reuses the same basic shape as a few of my other repos: download or fetch a corpus, extract
+This reuses the same basic shape as a few of my other repos
+(MarxGraph, NCERT-KG-HI): download or fetch a corpus, extract
 structured fields from it with an LLM, build a small graph from the
 extracted fields, then look at it.
+
+## Results from the first real run
+
+This ran successfully end to end on 176 papers pulled from a dozen
+search queries, spanning 2015 through 2026. Full data is on
+[HuggingFace](https://huggingface.co/datasets/joyboseroy/PsychMLGraph);
+here is the short version.
+
+**Corpus snapshot:** 176 papers, 9 disorders, 9 model families, 8 data
+modalities, 87 named datasets, 768 edges.
+
+**Most studied disorders** (by number of papers):
+
+| Disorder | Papers |
+|---|---|
+| Depression | 59 |
+| Schizophrenia | 32 |
+| Bipolar Disorder | 29 |
+| PTSD | 26 |
+| Anxiety | 26 |
+| Other | 22 |
+| Autism | 17 |
+| OCD | 8 |
+| Alzheimer's/Dementia | 2 |
+
+This corpus is heavily skewed toward Depression and away from
+Alzheimer's/Dementia, the disorder the original thesis actually studied
+in most depth. That skew comes from which search queries happened to
+return results before hitting Semantic Scholar's free-tier rate limit,
+not a deliberate design choice, and should not be read as reflecting
+the real balance of the wider literature. Anyone extending this corpus
+should specifically target more Alzheimer's-related queries to correct
+for this.
+
+**Most used models** (by number of papers):
+
+| Model | Papers |
+|---|---|
+| Other | 65 |
+| Random Forest | 46 |
+| SVM | 44 |
+| Gradient Boosting | 32 |
+| Logistic Regression | 25 |
+| CNN | 18 |
+| RNN/LSTM | 9 |
+| Transformer | 5 |
+| Large Language Model | 4 |
+
+**Most used data types** (by number of papers):
+
+| Data type | Papers |
+|---|---|
+| Clinical/tabular | 90 |
+| EEG | 32 |
+| Clinical notes/NLP | 30 |
+| Neuroimaging | 26 |
+| Other | 11 |
+| Wearable/sensor | 10 |
+| Genetic | 7 |
+| Speech/audio | 4 |
+
+**Average reported metric value by model** (accuracy, AUC, sensitivity,
+and F1 all mixed together here, so read this as a rough signal, not a
+precise comparison across different tasks):
+
+| Model | Average metric | Papers |
+|---|---|---|
+| RNN/LSTM | 0.979 | 5 |
+| CNN | 0.940 | 12 |
+| SVM | 0.870 | 34 |
+| Large Language Model | 0.845 | 2 |
+| Random Forest | 0.844 | 35 |
+| Other | 0.825 | 47 |
+| Transformer | 0.817 | 4 |
+| Gradient Boosting | 0.808 | 27 |
+| Logistic Regression | 0.808 | 20 |
+
+**The main question this project set out to ask:** has the literature
+shifted away from imaging toward cheap, clinically-available data over
+time, the way the source thesis argues it should?
+
+| Year | Cheap-data papers | Imaging papers | Total | % imaging |
+|---|---|---|---|---|
+| 2015 | 1 | 0 | 1 | 0.0% |
+| 2016 | 2 | 0 | 2 | 0.0% |
+| 2017 | 2 | 1 | 3 | 33.3% |
+| 2018 | 1 | 0 | 1 | 0.0% |
+| 2019 | 2 | 1 | 3 | 33.3% |
+| 2020 | 5 | 2 | 7 | 28.6% |
+| 2021 | 7 | 1 | 8 | 12.5% |
+| 2022 | 10 | 0 | 10 | 0.0% |
+| 2023 | 15 | 0 | 15 | 0.0% |
+| 2024 | 23 | 3 | 26 | 11.5% |
+| 2025 | 50 | 6 | 56 | 10.7% |
+| 2026 | 11 | 1 | 12 | 8.3% |
+
+The years before 2020 have only 1 to 3 papers each, so those
+percentages are noisy and should not be read as meaningful on their
+own. From 2022 onward the sample sizes are large enough to say
+something real: imaging's share of single-modality papers stays low,
+mostly under 12%, while the raw count of cheap-data papers grows
+substantially each year. That is a real, if modest, answer in favor of
+the thesis's own argument, drawn from the wider literature rather than
+one research group's work.
 
 ## Pipeline stages
 
@@ -84,22 +189,31 @@ kept once.
 
 I want to be upfront about this rather than let it look more finished
 than it is. I built and fully tested `build_graph.py`,
-`analyze_graph.py`, and `add_manual_papers.py` myself, using made-up
-sample data standing in for real papers, and all three work correctly,
-including correctly merging the same dataset mentioned in two different
-papers into one shared node, correctly computing the year-by-year
-trend, and correctly skipping duplicate or too-short manually-entered
-rows without silently losing them.
+`analyze_graph.py`, `add_manual_papers.py`, `fix_metric_scale.py`, and
+`convert_to_parquet.py` myself, using made-up sample data standing in
+for real papers, and all of them work correctly, including correctly
+merging the same dataset mentioned in two different papers into one
+shared node, correctly computing the year-by-year trend, correctly
+skipping duplicate or too-short manually-entered rows without silently
+losing them, and correctly rescaling percentage-style metric values.
 
-I have not been able to run `fetch_corpus.py` or `extract_kg.py` end to
-end myself against the real, live services, the environment I write
-code in cannot reach the Semantic Scholar API or call the Groq API
-directly. The first version of `fetch_corpus.py` ran into heavy rate
-limiting from Semantic Scholar's free unauthenticated tier in practice
-(a lot of 429 errors), which makes sense since that tier is shared
-across everyone using it at once without their own key. The current
-version retries with a growing delay and appends progress rather than
-overwriting it, which should help, but if it is still too unreliable,
+I was not able to run `fetch_corpus.py` or `extract_kg.py` end to end
+myself against the real, live services, the environment I write code
+in cannot reach the Semantic Scholar API or call the Groq API directly.
+Both have since actually been run for real, successfully, end to end,
+across 176 papers, and produced the results section above. The first
+version of `fetch_corpus.py` did run into heavy rate limiting from
+Semantic Scholar's free unauthenticated tier in practice (a lot of 429
+errors), which makes sense since that tier is shared across everyone
+using it at once without their own key. The current version retries
+with a growing delay and appends progress rather than overwriting it,
+and across three separate runs correctly built up from 38 to 127 to 176
+papers with no duplicates and no lost progress. `extract_kg.py` also
+turned up one genuine bug on that first real run, some metric values
+came back on a 0-100 scale instead of the requested 0-1 decimal scale,
+which `fix_metric_scale.py` now corrects, and the extraction prompt has
+been tightened to ask for decimals explicitly going forward. If the
+rate limiting is still too unreliable on a given connection,
 `add_manual_papers.py` sidesteps the problem completely by letting you
 add papers you find yourself.
 
