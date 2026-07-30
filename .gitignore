@@ -1,0 +1,19 @@
+# Raw paper data -- contains abstract text. Semantic Scholar's API terms
+# reserve permission to publish or redistribute paper content to the
+# individual author/publisher, not to Semantic Scholar or to users of
+# the API, so this should stay local, not get committed.
+raw_papers.jsonl
+
+# Everything else here is regenerable by re-running the pipeline scripts
+# in order, so there is no need to version any of it.
+extracted.jsonl
+nodes_papers.csv
+nodes_disorders.csv
+nodes_models.csv
+nodes_feature_types.csv
+nodes_datasets.csv
+edges.csv
+hf_release/
+
+__pycache__/
+*.pyc
